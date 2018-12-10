@@ -3,6 +3,7 @@ apply plugin: 'com.android.library'
 android {
     dexOptions {
         javaMaxHeapSize "2g"
+    buildToolsVersion '28.0.3'
     }
     compileSdkVersion 29
     buildToolsVersion "29.0.2"
