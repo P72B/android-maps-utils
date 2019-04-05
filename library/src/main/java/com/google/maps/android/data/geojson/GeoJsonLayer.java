@@ -39,7 +39,7 @@ public class GeoJsonLayer extends Layer {
      * @param map         map where the layer is to be rendered
      * @param geoJsonFile GeoJSON data to add to the layer
      */
-    public GeoJsonLayer(GoogleMap map, JSONObject geoJsonFile) {
+    public GeoJsonLayer(GoogleMap map, JSONObject geoJsonFile, boolean invert) {
         if (geoJsonFile == null) {
             throw new IllegalArgumentException("GeoJSON file cannot be null");
         }
@@ -51,7 +51,7 @@ public class GeoJsonLayer extends Layer {
         for (GeoJsonFeature feature : parser.getFeatures()) {
             geoJsonFeatures.put(feature, null);
         }
-        GeoJsonRenderer mRenderer = new GeoJsonRenderer(map, geoJsonFeatures);
+        GeoJsonRenderer mRenderer = new GeoJsonRenderer(map, geoJsonFeatures, invert);
         storeRenderer(mRenderer);
     }
 
@@ -61,12 +61,13 @@ public class GeoJsonLayer extends Layer {
      * @param map        map where the layer is to be rendered
      * @param resourceId GeoJSON file to add to the layer
      * @param context    context of the application, required to open the GeoJSON file
+     * @param invert     invert the polygon filling
      * @throws IOException   if the file cannot be open for read
      * @throws JSONException if the JSON file has invalid syntax and cannot be parsed successfully
      */
-    public GeoJsonLayer(GoogleMap map, int resourceId, Context context)
+    public GeoJsonLayer(GoogleMap map, int resourceId, Context context, boolean invert)
             throws IOException, JSONException {
-        this(map, createJsonFileObject(context.getResources().openRawResource(resourceId)));
+        this(map, createJsonFileObject(context.getResources().openRawResource(resourceId)), invert);
     }
 
     /**

@@ -17,7 +17,10 @@
 package com.google.maps.android.data;
 
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.support.v4.graphics.ColorUtils;
 import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -106,13 +109,15 @@ public class Renderer {
 
     private final GeoJsonPolygonStyle mDefaultPolygonStyle;
 
+    private final boolean mInvert;
+
     /**
      * Creates a new Renderer object
      *
      * @param map     map to place objects on
      * @param activity activity needed to add info windows and retain bitmap cache fragment
      */
-    public Renderer(GoogleMap map, FragmentActivity activity) {
+    public Renderer(GoogleMap map, FragmentActivity activity, boolean invert) {
         mMap = map;
         mActivity = activity;
         mLayerOnMap = false;
@@ -135,6 +140,7 @@ public class Renderer {
         mDefaultLineStringStyle = null;
         mDefaultPolygonStyle = null;
         mContainerFeatures = new BiMultiMap<>();
+        mInvert = invert;
     }
 
     /**
@@ -143,7 +149,7 @@ public class Renderer {
      * @param map      map to place objects on
      * @param features contains a hashmap of features and objects that will go on the map
      */
-    public Renderer(GoogleMap map, HashMap<? extends Feature, Object> features) {
+    public Renderer(GoogleMap map, HashMap<? extends Feature, Object> features, boolean invert) {
         mMap = map;
         mFeatures.putAll(features);
         mLayerOnMap = false;
@@ -153,6 +159,7 @@ public class Renderer {
         mDefaultPolygonStyle = new GeoJsonPolygonStyle();
         mImagesCache = null;
         mContainerFeatures = null;
+        mInvert = invert;
     }
 
     /**
@@ -531,6 +538,14 @@ public class Renderer {
      */
     protected Object addGeoJsonFeatureToMap(Feature feature, Geometry geometry) {
         String geometryType = geometry.getGeometryType();
+        Object result;
+
+        final List<LatLng> worldBounds = getWorldBounds();
+        final PolygonOptions worldPolygonOptions = new PolygonOptions();
+        if (mInvert) {
+            worldPolygonOptions.addAll(worldBounds);
+        }
+
         switch (geometryType) {
             case "Point":
                 MarkerOptions markerOptions = null;
@@ -555,7 +570,18 @@ public class Renderer {
                 } else if (feature instanceof KmlPlacemark) {
                     polygonOptions = ((KmlPlacemark) feature).getPolygonOptions();
                 }
-                return addPolygonToMap(polygonOptions, (DataPolygon) geometry);
+
+                if (mInvert) {
+                    result = addPolygonToMap(polygonOptions, (DataPolygon) geometry, worldPolygonOptions);
+                    if (polygonOptions != null) {
+                        worldPolygonOptions.fillColor(polygonOptions.getFillColor());
+                        worldPolygonOptions.strokeWidth(polygonOptions.getStrokeWidth());
+                        worldPolygonOptions.strokeColor(polygonOptions.getStrokeColor());
+                    }
+                    addPolygonOptionsToMap(worldPolygonOptions);
+                    return result;
+                }
+                return addPolygonToMap(polygonOptions, (DataPolygon) geometry, null);
             case "MultiPoint":
                 return addMultiPointToMap(((GeoJsonFeature) feature).getPointStyle(),
                         (GeoJsonMultiPoint) geometry);
@@ -563,13 +589,30 @@ public class Renderer {
                 return addMultiLineStringToMap(((GeoJsonFeature) feature).getLineStringStyle(),
                         ((GeoJsonMultiLineString) geometry));
             case "MultiPolygon":
+                if (mInvert) {
+                    GeoJsonPolygonStyle geoJsonPolygonStyle = ((GeoJsonFeature) feature).getPolygonStyle();
+                    result = addMultiPolygonToMap(geoJsonPolygonStyle,
+                            ((GeoJsonMultiPolygon) geometry), worldPolygonOptions);
+
+                    worldPolygonOptions.fillColor(geoJsonPolygonStyle.getFillColor());
+                    worldPolygonOptions.strokeWidth(geoJsonPolygonStyle.getStrokeWidth());
+                    worldPolygonOptions.strokeColor(geoJsonPolygonStyle.getStrokeColor());
+
+                    addPolygonOptionsToMap(worldPolygonOptions);
+                    return result;
+                }
                 return addMultiPolygonToMap(((GeoJsonFeature) feature).getPolygonStyle(),
-                        ((GeoJsonMultiPolygon) geometry));
+                        ((GeoJsonMultiPolygon) geometry), null);
             case "GeometryCollection":
                 return addGeometryCollectionToMap(((GeoJsonFeature) feature),
                         ((GeoJsonGeometryCollection) geometry).getGeometries());
         }
         return null;
+    }
+
+    private void addPolygonOptionsToMap(PolygonOptions polygonOptions) {
+        final Polygon addedPolygon = mMap.addPolygon(polygonOptions);
+        addedPolygon.setClickable(polygonOptions.isClickable());
     }
 
     /**
@@ -629,7 +672,7 @@ public class Renderer {
                 } else if (style.isPolyRandomColorMode()) {
                     polygonOptions.fillColor(KmlStyle.computeRandomColor(polygonOptions.getFillColor()));
                 }
-                Polygon polygon = addPolygonToMap(polygonOptions, (DataPolygon) geometry);
+                Polygon polygon = addPolygonToMap(polygonOptions, (DataPolygon) geometry, null);
                 polygon.setVisible(isVisible);
                 if (hasDrawOrder) {
                     polygon.setZIndex(drawOrder);
@@ -724,7 +767,23 @@ public class Renderer {
      * @param polygon        contains coordinates for the Polygon
      * @return Polygon object created from given DataPolygon
      */
-    protected Polygon addPolygonToMap(PolygonOptions polygonOptions, DataPolygon polygon) {
+    @Nullable
+    protected Polygon addPolygonToMap(PolygonOptions polygonOptions, DataPolygon polygon, @Nullable final PolygonOptions worldPolygonOptions) {
+        if (mInvert && worldPolygonOptions != null) {
+            Polygon addedPolygon = null;
+            polygonOptions.fillColor(Color.TRANSPARENT);
+            worldPolygonOptions.addHole(polygon.getOuterBoundaryCoordinates());
+
+            // Following arrays are holes
+            List<List<LatLng>> innerBoundaries = polygon.getInnerBoundaryCoordinates();
+            if (!innerBoundaries.isEmpty()) {
+                for (List<LatLng> innerBoundary : innerBoundaries) {
+                    polygonOptions.addAll(innerBoundary);
+                }
+                addedPolygon = mMap.addPolygon(polygonOptions);
+            }
+            return addedPolygon;
+        }
         // First array of coordinates are the outline
         polygonOptions.addAll(polygon.getOuterBoundaryCoordinates());
         // Following arrays are holes
@@ -735,6 +794,21 @@ public class Renderer {
         Polygon addedPolygon = mMap.addPolygon(polygonOptions);
         addedPolygon.setClickable(polygonOptions.isClickable());
         return addedPolygon;
+    }
+
+    private List<LatLng> getWorldBounds() {
+        final List<LatLng> result = new ArrayList<>();
+        final Float delta = 0.01f;
+        result.add(new LatLng(90.0 - delta, -180.0 + delta));
+        result.add(new LatLng(0.0, -180.0 + delta));
+        result.add(new LatLng(-90.0 + delta, -180.0 + delta));
+        result.add(new LatLng(-90.0 + delta, 0.0));
+        result.add(new LatLng(-90.0 + delta, 180.0 - delta));
+        result.add(new LatLng(0.0, 180.0 - delta));
+        result.add(new LatLng(90.0 - delta, 180.0 - delta));
+        result.add(new LatLng(90.0 - delta, 0.0));
+        result.add(new LatLng(90.0 - delta, -180.0 + delta));
+        return result;
     }
 
     /**
@@ -876,10 +950,11 @@ public class Renderer {
      * @return array of Polygons that have been added to the map
      */
     private ArrayList<Polygon> addMultiPolygonToMap(GeoJsonPolygonStyle polygonStyle,
-                                                    GeoJsonMultiPolygon multiPolygon) {
+                                                    GeoJsonMultiPolygon multiPolygon,
+                                                    @Nullable final PolygonOptions worldPolygonOptions) {
         ArrayList<Polygon> polygons = new ArrayList<>();
         for (GeoJsonPolygon geoJsonPolygon : multiPolygon.getPolygons()) {
-            polygons.add(addPolygonToMap(polygonStyle.toPolygonOptions(), geoJsonPolygon));
+            polygons.add(addPolygonToMap(polygonStyle.toPolygonOptions(), geoJsonPolygon, worldPolygonOptions));
         }
         return polygons;
     }

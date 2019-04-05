@@ -46,7 +46,7 @@ public class KmlRenderer extends Renderer {
     private ArrayList<KmlContainer> mContainers;
 
     /* package */ KmlRenderer(GoogleMap map, FragmentActivity activity) {
-        super(map, activity);
+        super(map, activity, false);
         mGroundOverlayUrls = new ArrayList<>();
         mMarkerIconsDownloaded = false;
         mGroundOverlayImagesDownloaded = false;
