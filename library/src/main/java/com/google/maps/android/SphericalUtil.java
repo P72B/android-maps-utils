@@ -20,8 +20,21 @@ import com.google.android.gms.maps.model.LatLng;
 
 import java.util.List;
 
-import static com.google.maps.android.MathUtil.*;
+import static com.google.maps.android.MathUtil.EARTH_RADIUS;
 import static java.lang.Math.*;
+import static com.google.maps.android.MathUtil.arcHav;
+import static com.google.maps.android.MathUtil.havDistance;
+import static com.google.maps.android.MathUtil.wrap;
+import static java.lang.Math.PI;
+import static java.lang.Math.abs;
+import static java.lang.Math.asin;
+import static java.lang.Math.atan2;
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
+import static java.lang.Math.tan;
+import static java.lang.Math.toDegrees;
+import static java.lang.Math.toRadians;
 
 public class SphericalUtil {
 

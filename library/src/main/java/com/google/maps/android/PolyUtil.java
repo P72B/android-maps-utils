@@ -22,9 +22,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-import static com.google.maps.android.SphericalUtil.*;
-import static java.lang.Math.*;
-import static com.google.maps.android.MathUtil.*;
+import static com.google.maps.android.MathUtil.EARTH_RADIUS;
+import static com.google.maps.android.MathUtil.clamp;
+import static com.google.maps.android.MathUtil.hav;
+import static com.google.maps.android.MathUtil.havDistance;
+import static com.google.maps.android.MathUtil.havFromSin;
+import static com.google.maps.android.MathUtil.inverseMercator;
+import static com.google.maps.android.MathUtil.mercator;
+import static com.google.maps.android.MathUtil.sinFromHav;
+import static com.google.maps.android.MathUtil.sinSumFromHav;
+import static com.google.maps.android.MathUtil.wrap;
+import static com.google.maps.android.SphericalUtil.computeDistanceBetween;
+import static java.lang.Math.PI;
+import static java.lang.Math.atan2;
+import static java.lang.Math.cos;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
+import static java.lang.Math.tan;
+import static java.lang.Math.toRadians;
 
 public class PolyUtil {
 
@@ -559,5 +576,21 @@ public class PolyUtil {
             v >>= 5;
         }
         result.append(Character.toChars((int) (v + 63)));
+    }
+
+    /**
+     * Calculates the relative bearing of a point B given a point A's position in degrees
+     *
+     * @param a the observing position
+     * @param b the observed position
+     * @return the degree bearing of b towards a
+     * Example: given a value of 0.0,0.0 for A, and a value of 0.0,1.0 for B, the result would be 90.0
+     */
+    static double computeBearing(LatLng a, LatLng b) {
+        double dLon = b.longitude - a.longitude;
+        double y = sin(dLon) * cos(b.latitude);
+        double x = cos(a.latitude) * sin(b.latitude) - sin(a.latitude) * cos(b.latitude) * cos(dLon);
+        double brng = Math.toDegrees(atan2(y, x));
+        return 360 - (brng + 360) % 360;
     }
 }
