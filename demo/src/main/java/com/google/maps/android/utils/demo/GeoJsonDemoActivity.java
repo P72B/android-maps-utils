@@ -18,8 +18,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.graphics.Color;
-import android.support.annotation.Nullable;
-import android.support.v4.graphics.ColorUtils;
+
+import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
