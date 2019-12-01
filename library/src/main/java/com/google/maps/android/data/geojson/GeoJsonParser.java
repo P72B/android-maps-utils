@@ -90,7 +90,7 @@ public class GeoJsonParser {
      *
      * @param geoJsonFile GeoJSON file to parse
      */
-    /* package */ GeoJsonParser(JSONObject geoJsonFile) {
+    public GeoJsonParser(JSONObject geoJsonFile) {
         mGeoJsonFile = geoJsonFile;
         mGeoJsonFeatures = new ArrayList<>();
         mBoundingBox = null;
@@ -109,7 +109,7 @@ public class GeoJsonParser {
      * @param geoJsonFeature feature to parse
      * @return GeoJsonFeature object
      */
-    private static GeoJsonFeature parseFeature(JSONObject geoJsonFeature) {
+    public static GeoJsonFeature parseFeature(JSONObject geoJsonFeature) {
         String id = null;
         LatLngBounds boundingBox = null;
         Geometry geometry = null;
