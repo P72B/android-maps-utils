@@ -109,7 +109,7 @@ public class GeoJsonParser {
      * @param geoJsonFeature feature to parse
      * @return GeoJsonFeature object
      */
-    private static GeoJsonFeature parseFeature(JSONObject geoJsonFeature) {
+    public static GeoJsonFeature parseFeature(JSONObject geoJsonFeature) {
         String id = null;
         LatLngBounds boundingBox = null;
         Geometry geometry = null;
